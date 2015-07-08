@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 
-import click
 import sys
 import os
 from urlparse import urlparse
+import click
 from etcd import Client, EtcdKeyNotFound
-from pprint import pformat
 
 @click.command()
 @click.option('--etcdctl-peers', default='http://127.0.0.1:4001', help="ETCD peers list", envvar='ETCDCTL_PEERS')
@@ -14,15 +13,12 @@ from pprint import pformat
 @click.option('--output', default='/output/environment', help="Output environment file")
 @click.option('--maps', multiple=True)
 @click.argument('links', nargs=-1)
-def run(etcdctl_peers, services_base, name, output, maps, links):
-    """Main function"""
-
+def main(etcdctl_peers, services_base, name, output, maps, links):
     click.secho("Connecting to ECTD: %s" % etcdctl_peers, fg='green')
-
     click.secho("Links: %s" % " ".join(str(i) for i in links), fg='green')
 
     if len(links) == 0:
-        click.echo("Nothing to do")
+        click.echo('Nothing to do')
         sys.exit()
 
     etcd_url = urlparse(etcdctl_peers)
@@ -36,24 +32,23 @@ def run(etcdctl_peers, services_base, name, output, maps, links):
         lname, _, alias = link.partition(":")
         if not alias:
             alias = lname.replace('-', '_')
-
         try:
             # Try to get the service
             service = etcd.read(os.path.join(services_base, lname))
+        except EtcdKeyNotFound:
+            click.secho("Service: %s not found" % lname, fg='red')
+        else:
             # Expects the service to have some children
-            if len(service._children) > 0:
-                value = service._children[0]["value"]
+            for child in service._children:
+                value = child['value']
                 ip, _, port = value.partition(":")
                 click.secho("Key: %s found" % lname, fg='green')
-
                 environment["%s_NAME" % alias.upper()] = "/%s/%s" % (name, lname)
                 environment["%s_PORT" % alias.upper()] = "tcp://%s" % value
                 environment["%s_PORT_%s_TCP" % (alias.upper(), port)] = "tcp://%s" % value
                 environment["%s_PORT_%s_TCP_PROTO" % (alias.upper(), port)] = "tcp"
                 environment["%s_PORT_%s_TCP_PORT" % (alias.upper(), port)] = "%s" % port
                 environment["%s_PORT_%s_TCP_ADDR" % (alias.upper(), port)] = "%s" % ip
-        except EtcdKeyNotFound:
-            click.secho("Service: %s not found" % lname, fg='red')
 
     # Do mapping
     for item in maps:
@@ -72,4 +67,4 @@ def run(etcdctl_peers, services_base, name, output, maps, links):
     click.secho("All done.", fg='green')
 
 if __name__ == '__main__':
-    run()
+    main()
