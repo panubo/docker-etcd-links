@@ -1,7 +1,5 @@
 ## Etcd to Docker links
 
-[![Docker Repository on Quay.io](https://quay.io/repository/panubo/etcd-links/status "Docker Repository on Quay.io")](https://quay.io/repository/panubo/etcd-links)
-
 This image creates Docker like links with data from 
 [etcd](https://github.com/coreos/etcd) and 
 [registrator](https://github.com/gliderlabs/registrator).
